@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BuyOut Lounge - Secure Voice Channel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Paggamit ng PeerJS library -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'GG Sans', sans-serif; }
@@ -61,8 +60,8 @@
     <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
         <div class="welcome-box">
             <h2>BuyOut Lounge 🧈</h2>
-            <p>Bawal ang pasaway! Ilagay ang Secret Pass at ang iyong IGN para makapasok sa sariling Voice Channel natin.</p>
-            <input type="password" id="secret-pass-input" placeholder="Secret Pass (pogikokaasar)">
+            <p>Ilagay ang Secret Pass (`pogikokaasar`) at ang iyong sariling IGN para magkasama kayo sa voice chat.</p>
+            <input type="password" id="secret-pass-input" placeholder="Secret Pass">
             <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 20px;">
             <button class="connect-btn" onclick="verifyAndJoin()">Pumasok sa Voice Channel</button>
         </div>
@@ -111,15 +110,14 @@
                 </div>
                 <div class="stage-content">
                     <div class="welcome-box" style="text-align: center;">
-                        <h2>Naka-connect ka na sa Sariling Tropa Voice Chat! 🎙️</h2>
-                        <p>Magkakarinigan na kayo rito nang sabay-sabay. Gamitin ang mute o deafen kung kinakailangan.</p>
+                        <h2>Naka-connect ka na sa Room! 🎙️</h2>
+                        <p>Sabihin sa iyong tropa na pumasok gamit ang parehong Secret Pass at kanilang IGN.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Dito mapupunta ang audio element ng bawat isa -->
     <div id="audio-container"></div>
 
     <script>
@@ -128,16 +126,17 @@
         let myIGN = "";
         let isMuted = false;
         let isDeafened = false;
+        const activeConnections = {};
 
-        // Gagamit tayo ng nakapirming base room code para sa lahat ng pumasok
-        const ROOM_PREFIX = "buyout_lounge_pogikokaasar_";
+        // Nakapirming Master ID para sa room na ito
+        const MASTER_ROOM_ID = "buyout_lounge_master_room_pogikokaasar_v1";
 
         async function verifyAndJoin() {
             const passInput = document.getElementById('secret-pass-input').value.trim();
             myIGN = document.getElementById('ign-input').value.trim();
 
             if (passInput !== "pogikokaasar") {
-                alert("Mali ang Secret Pass! Hindi ka pwedeng pumasok.");
+                alert("Mali ang Secret Pass! Subukang ulitin.");
                 return;
             }
 
@@ -149,7 +148,7 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             } catch (err) {
-                alert("Kailangan mong payagan ang mikropono sa browser para magamit ito!");
+                alert("Kailangan mong payagan ang mikropono (microphone permission) para magamit ito!");
                 return;
             }
 
@@ -157,19 +156,19 @@
             document.getElementById('chat-screen').style.display = 'block';
             document.getElementById('my-display-ign').innerText = myIGN;
 
-            // Gumawa ng unique ID pero may parehong prefix para madali kayong magkita
-            const cleanIGN = myIGN.replace(/[^a-zA-Z0-9]/g, '_');
-            const myPeerId = ROOM_PREFIX + cleanIGN + "_" + Math.floor(Math.random() * 1000);
-
-            peer = new Peer(myPeerId);
+            // Gamitin ang sariling IGN bilang bahagi ng Peer ID para makilala kaagad
+            const myUniqueId = "user_" + myIGN.replace(/[^a-zA-Z0-9]/g, '_') + "_" + Math.floor(Math.random() * 10000);
+            peer = new Peer(myUniqueId);
 
             peer.on('open', (id) => {
-                console.log('My Connected Peer ID:', id);
-                // I-broadcast ang presence natin at humanap ng iba sa parehong room prefix
-                findAndCallOthers(id);
+                console.log('My Peer ID:', id);
+                addUserToList(myIGN + " (Ikaw)", id);
+
+                // Subukang kumonekta sa Master Room Coordinator para malaman kung sino pa ang online
+                connectToMasterRoom(id);
             });
 
-            // Kapag may tumawag sa iyo
+            // Kapag may tumawag na audio stream mula sa iba
             peer.on('call', (call) => {
                 call.answer(localStream);
                 call.on('stream', (remoteStream) => {
@@ -177,25 +176,109 @@
                 });
             });
 
-            addUserToList(myIGN, myPeerId);
+            // Kapag may pumasok na data connection mula sa iba
+            peer.on('connection', (conn) => {
+                setupDataConnection(conn);
+            });
         }
 
-        // Trick para i-scan at tawagan ang mga kasama sa parehong room prefix
-        function findAndCallOthers(myId) {
-            // Dahil wala tayong database server, gagamit tayo ng PeerJS open connection interval o kaya direct call trick
-            // Sa bawat pumasok, mag-aabang siya at magpapadala ng ping sa mga kasama
-            setInterval(() => {
-                // Periodic check para masigurong nagkakakitaan kayo
-            }, 5000);
+        function connectToMasterRoom(myId) {
+            // Kung ikaw ang unang pumasok, subukan nating i-register ang sarili bilang host kung bakante, 
+            // o kaya ay mag-connect sa master coordinator ID para mag-sync ng mga user.
+            const masterConn = peer.connect(MASTER_ROOM_ID);
+            
+            masterConn.on('open', () => {
+                masterConn.send({ type: 'JOIN', ign: myIGN, peerId: myId });
+            });
 
-            // Para mas madali, kapag pumasok ka, mag-broadcast tayo ng signal sa pamamagitan ng pag-abang sa mga papasok
-            window.addEventListener('online', () => {});
+            masterConn.on('data', (data) => {
+                if (data.type === 'PEER_LIST') {
+                    // Tawagan ang lahat ng nakitang active peers sa room
+                    data.peers.forEach(p => {
+                        if (p.peerId !== peer.id) {
+                            callPeer(p.peerId, p.ign);
+                        }
+                    });
+                }
+            });
+
+            // Kung hindi pa nag-e-exist ang master room, ikaw ang mag-host nito sa parehong browser instance!
+            setTimeout(() => {
+                if (!masterConn.open) {
+                    createMasterRoomHost(myId);
+                }
+            }, 2000);
         }
 
-        // Alternatibong paraan: Gamitin ang PeerJS built-in connection para mag-sync ng mga user
-        // Para masiguro naming magkatagpo kayo, i-click ninyo ang "Refresh/Auto-Connect" kung sakaling may pumasok na bago.
+        function createMasterRoomHost(myId) {
+            try {
+                const hostPeer = new Peer(MASTER_ROOM_ID);
+                let roomPeers = [{ peerId: myId, ign: myIGN }];
 
-        function playAudioStream(peerId, stream) {
+                hostPeer.on('connection', (conn) => {
+                    conn.on('data', (data) => {
+                        if (data.type === 'JOIN') {
+                            roomPeers.push({ peerId: data.peerId, ign: data.ign });
+                            // I-broadcast ang updated list sa lahat
+                            roomPeers.forEach(p => {
+                                if (p.peerId !== peer.id && p.peerId !== data.peerId) {
+                                    // Notify other peers
+                                    let c = peer.connect(p.peerId);
+                                    c.on('open', () => c.send({ type: 'NEW_PEER', peerId: data.peerId, ign: data.ign }));
+                                }
+                            });
+                            // Ibalik ang kasalukuyang listahan sa bagong salta
+                            conn.send({ type: 'PEER_LIST', peers: roomPeers });
+                            addUserToList(data.ign, data.peerId);
+                        }
+                    });
+                });
+
+                hostPeer.on('call', (call) => {
+                    call.answer(localStream);
+                    call.on('stream', (remoteStream) => {
+                        playAudioStream(call.peer, remoteStream);
+                    });
+                });
+            } catch(e) {
+                console.log("Master host already active or handled.");
+            }
+        }
+
+        function callPeer(peerId, ign) {
+            if (activeConnections[peerId]) return;
+            activeConnections[peerId] = true;
+
+            const call = peer.call(peerId, localStream);
+            if (call) {
+                call.on('stream', (remoteStream) => {
+                    playAudioStream(peerId, remoteStream, ign);
+                });
+            }
+
+            // Magbukas din ng data connection para sa pagkilala ng pangalan
+            const conn = peer.connect(peerId);
+            conn.on('open', () => {
+                conn.send({ type: 'HELLO', ign: myIGN });
+            });
+            conn.on('data', (data) => {
+                if (data.type === 'HELLO') {
+                    addUserToList(data.ign, peerId);
+                }
+            });
+        }
+
+        function setupDataConnection(conn) {
+            conn.on('data', (data) => {
+                if (data.type === 'HELLO') {
+                    addUserToList(data.ign, conn.peer);
+                } else if (data.type === 'NEW_PEER') {
+                    callPeer(data.peerId, data.ign);
+                }
+            });
+        }
+
+        function playAudioStream(peerId, stream, customName = "") {
             if (document.getElementById('audio_' + peerId)) return;
             const audio = document.createElement('audio');
             audio.id = 'audio_' + peerId;
@@ -204,10 +287,12 @@
             if (isDeafened) audio.muted = true;
             document.getElementById('audio-container').appendChild(audio);
 
-            // Kunin ang IGN mula sa Peer ID na may format na buyout_lounge_pogikokaasar_IGN_random
-            let parts = peerId.split('_');
-            let remoteIGN = parts.length > 3 ? parts[3] : "Tropa";
-            addUserToList(remoteIGN, peerId);
+            let displayName = customName;
+            if (!displayName) {
+                let parts = peerId.split('_');
+                displayName = parts.length > 1 ? parts[1] : "Tropa";
+            }
+            addUserToList(displayName, peerId);
         }
 
         function toggleMute() {
