@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BuyOut Lounge - Secure Voice Channel</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'GG Sans', sans-serif; }
+        body { background-color: #36393f; color: #dcddde; height: 100vh; display: flex; overflow: hidden; }
+        
+        .servers-sidebar { width: 72px; background-color: #202225; display: flex; flex-direction: column; align-items: center; padding-top: 12px; gap: 8px; z-index: 10; }
+        .server-icon { width: 48px; height: 48px; border-radius: 50%; background-color: #f1c40f; display: flex; align-items: center; justify-content: center; font-size: 24px; cursor: pointer; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .server-icon img { width: 100%; height: 100%; object-fit: cover; }
+        .server-separator { width: 32px; height: 2px; background-color: #3f4147; border-radius: 1px; }
+
+        .channels-sidebar { width: 240px; background-color: #2f3136; display: flex; flex-direction: column; }
+        .server-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-weight: bold; color: #fff; border-bottom: 2px solid #202225; }
+        .channels-list { flex: 1; padding: 16px 8px; overflow-y: auto; }
+        .category-title { font-size: 12px; font-weight: bold; color: #8e9297; text-transform: uppercase; margin-bottom: 4px; padding: 0 8px; }
+        
+        .channel-item { display: flex; flex-direction: column; margin-bottom: 4px; border-radius: 4px; }
+        .channel-main { display: flex; align-items: center; padding: 8px; border-radius: 4px; color: #fff; background-color: #393c43; gap: 8px; }
+        
+        .channel-users { padding-left: 12px; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+        .voice-user { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; font-size: 14px; color: #fff; background-color: #34373c; }
+        .user-avatar { width: 24px; height: 24px; border-radius: 50%; background-color: #7289da; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+
+        .user-profile-bar { height: 52px; background-color: #292b2f; display: flex; align-items: center; padding: 0 8px; gap: 8px; }
+        .profile-info { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; }
+        .profile-name { font-size: 14px; font-weight: 600; color: #fff; }
+        .profile-status { font-size: 12px; color: #3ba55d; }
+        .profile-controls { display: flex; gap: 2px; }
+        
+        .control-btn { background: none; border: none; color: #b9bbbe; width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .control-btn:hover { background-color: #34373c; color: #dcddde; }
+        .control-btn.active { color: #ed4245; }
+
+        .main-stage { flex: 1; display: flex; flex-direction: column; background-color: #36393f; }
+        .stage-header { height: 48px; border-bottom: 2px solid #202225; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-weight: bold; color: #fff; }
+        .stage-content { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+        
+        .welcome-box { background-color: #2f3136; padding: 32px; border-radius: 8px; max-width: 450px; width: 100%; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+        .welcome-box h2 { color: #fff; margin-bottom: 12px; }
+        .welcome-box p { color: #8e9297; font-size: 14px; margin-bottom: 20px; }
+        
+        .connect-btn { background-color: #3ba55d; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        .connect-btn:hover { background-color: #2d8147; }
+        
+        .disconnect-btn { background-color: #ed4245; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .disconnect-btn:hover { background-color: #c03537; }
+
+        input[type="text"], input[type="password"] { background: #202225; border: 1px solid #202225; color: #fff; padding: 12px; border-radius: 4px; width: 100%; margin-bottom: 12px; font-size: 15px; text-align: center; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <!-- SCREEN 1: Login Gate (Secret Pass + IGN) -->
+    <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
+        <div class="welcome-box">
+            <h2>BuyOut Lounge 🧈</h2>
+            <p>Ilagay ang tamang Secret Pass at ang iyong In-Game Name (IGN) para makapasok.</p>
+            <input type="password" id="secret-pass-input" placeholder="Secret Pass (e.g. pogikokaasar)">
+            <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 20px;">
+            <button class="connect-btn" onclick="verifyAndJoin()">Pumasok sa Voice Channel</button>
+        </div>
+    </div>
+
+    <!-- SCREEN 2: Discord Layout kapag nakapasok na -->
+    <div id="chat-screen" style="display: none; width: 100vw; height: 100vh;">
+        <div style="display: flex; width: 100%; height: 100%;">
+            <!-- Servers Sidebar -->
+            <div class="servers-sidebar">
+                <div class="server-icon"><img src="https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=100&auto=format&fit=crop&q=80" alt="Butter"></div>
+                <div class="server-separator"></div>
+            </div>
+
+            <!-- Channels Sidebar -->
+            <div class="channels-sidebar">
+                <div class="server-header"><span>BuyOut Lounge</span></div>
+                <div class="channels-list">
+                    <div class="category-title">Voice Channels</div>
+                    <div class="channel-item">
+                        <div class="channel-main"><i class="fa-solid fa-volume-high"></i><span>BuyOut Voice Channel</span></div>
+                        <div class="channel-users" id="active-users-list"></div>
+                    </div>
+                </div>
+                <div class="user-profile-bar">
+                    <div class="profile-info">
+                        <div class="user-avatar">🎮</div>
+                        <div>
+                            <div class="profile-name" id="my-display-ign">IGN</div>
+                            <div class="profile-status">Online</div>
+                        </div>
+                    </div>
+                    <div class="profile-controls">
+                        <!-- Mute Button -->
+                        <button class="control-btn" id="mute-btn" onclick="toggleMute()" title="Mute">
+                            <i class="fa-solid fa-microphone"></i>
+                        </button>
+                        <!-- Deafen Button -->
+                        <button class="control-btn" id="deafen-btn" onclick="toggleDeafen()" title="Deafen">
+                            <i class="fa-solid fa-headphones"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Stage -->
+            <div class="main-stage">
+                <div class="stage-header">
+                    <span><i class="fa-solid fa-volume-high"></i> BuyOut Voice Channel</span>
+                    <button class="disconnect-btn" onclick="leaveCall()"><i class="fa-solid fa-phone-slash"></i> End Call</button>
+                </div>
+                <div class="stage-content">
+                    <div class="welcome-box" style="text-align: center;">
+                        <h2>Naka-connect ka na sa Voice Chat! 🎙️</h2>
+                        <p>Lahat ng pumasok gamit ang tamang pass ay magkakarinigan dito. Pwede mong i-mute o i-deafen ang iyong sarili gamit ang mga pindutan sa ibaba.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Audio container para sa mga boses ng iba -->
+    <div id="audio-container"></div>
+
+    <script>
+        let localStream;
+        let peer;
+        let myIGN = "";
+        let isMuted = false;
+        let isDeafened = false;
+
+        async function verifyAndJoin() {
+            const passInput = document.getElementById('secret-pass-input').value.trim();
+            myIGN = document.getElementById('ign-input').value.trim();
+
+            if (passInput !== "pogikokaasar") {
+                alert("Mali ang Secret Pass! Hindi ka pwedeng pumasok.");
+                return;
+            }
+
+            if (!myIGN) {
+                alert("Pakilagay ang iyong IGN muna!");
+                return;
+            }
+
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            } catch (err) {
+                alert("Kailangan mong payagan ang mikropono para magamit ito!");
+                return;
+            }
+
+            document.getElementById('room-screen').style.display = 'none';
+            document.getElementById('chat-screen').style.display = 'block';
+            document.getElementById('my-display-ign').innerText = myIGN;
+
+            addUserToList(myIGN, 'my_self');
+
+            // Gamit ang PeerJS room protocol para magkita-kita ang mga gumagamit ng secret pass
+            peer = new Peer('buyout_room_' + Math.floor(Math.random() * 100000));
+
+            peer.on('open', (id) => {
+                console.log('Online ID:', id);
+            });
+
+            // Kapag may pumasok at tumawag sa iyo
+            peer.on('call', (call) => {
+                call.answer(localStream);
+                call.on('stream', (remoteStream) => {
+                    playAudioStream(call.peer, remoteStream);
+                });
+            });
+        }
+
+        function playAudioStream(peerId, stream) {
+            if (document.getElementById('audio_' + peerId)) return;
+            const audio = document.createElement('audio');
+            audio.id = 'audio_' + peerId;
+            audio.srcObject = stream;
+            audio.autoplay = true;
+            if (isDeafened) audio.muted = true; // Kung deafened ka, hindi mo rin maririnig
+            document.getElementById('audio-container').appendChild(audio);
+
+            addUserToList('Kasapi ng Tropa', peerId);
+        }
+
+        // MUTE BUTTON
+        function toggleMute() {
+            if (!localStream) return;
+            isMuted = !isMuted;
+            localStream.getAudioTracks()[0].enabled = !isMuted;
+            const btn = document.getElementById('mute-btn');
+            if (isMuted) {
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fa-solid fa-microphone-slash"></i>';
+            } else {
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            }
+        }
+
+        // DEAFEN BUTTON (Naka-mute ka na, tapos di mo rinig ang iba)
+        function toggleDeafen() {
+            isDeafened = !isDeafened;
+            const deafenBtn = document.getElementById('deafen-btn');
+            
+            // I-mute/unmute lahat ng remote audio elements
+            const audioElements = document.querySelectorAll('#audio-container audio');
+            audioElements.forEach(audio => {
+                audio.muted = isDeafened;
+            });
+
+            if (isDeafened) {
+                deafenBtn.classList.add('active');
+                deafenBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+                if (!isMuted) toggleMute(); // Auto-mute din kapag deafened (Discord style)
+            } else {
+                deafenBtn.classList.remove('active');
+                deafenBtn.innerHTML = '<i class="fa-solid fa-headphones"></i>';
+            }
+        }
+
+        // END CALL / LEAVE BUTTON
+        function leaveCall() {
+            if (localStream) {
+                localStream.getTracks().forEach(track => track.stop());
+            }
+            if (peer) {
+                peer.destroy();
+            }
+            window.location.reload(); // I-refresh para bumalik sa login screen
+        }
+
+        function addUserToList(name, id) {
+            const list = document.getElementById('active-users-list');
+            if (document.getElementById('user_ui_' + id)) return;
+            const userDiv = document.createElement('div');
+            userDiv.className = 'voice-user';
+            userDiv.id = 'user_ui_' + id;
+            userDiv.innerHTML = `
+                <div class="user-avatar">🎮</div>
+                <span>${name}</span>
+            `;
+            list.appendChild(userDiv);
+        }
+    </script>
+</body>
+</html>
