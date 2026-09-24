@@ -31,7 +31,6 @@
         .user-icons { display: flex; gap: 4px; font-size: 12px; color: #ed4245; }
         .user-avatar { width: 24px; height: 24px; border-radius: 50%; background-color: #7289da; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; flex-shrink: 0; }
         
-        /* Individual User Volume Slider Box */
         .user-vol-box { display: none; align-items: center; justify-content: space-between; font-size: 11px; background: #202225; padding: 4px 6px; border-radius: 3px; color: #b9bbbe; width: 100%; margin-top: 2px; }
         .user-vol-box input { width: 110px; accent-color: #7289da; cursor: pointer; }
 
@@ -72,7 +71,6 @@
 
         input[type="text"], input[type="password"] { background: #202225; border: 1px solid #202225; color: #fff; padding: 12px; border-radius: 4px; width: 100%; margin-bottom: 12px; font-size: 15px; text-align: center; font-weight: bold; }
 
-        /* Notification Toast */
         #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 999; }
         .toast { background-color: #18191c; color: #dcddde; padding: 10px 16px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); font-size: 13px; border-left: 4px solid #7289da; animation: fadeInOut 3s forwards; }
         @keyframes fadeInOut { 
@@ -85,11 +83,10 @@
 </head>
 <body>
 
-    <!-- SCREEN 1: Login Gate -->
     <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
         <div class="welcome-box">
             <h2>BuyOut Lounge 🧈</h2>
-            <p>Ilagay ang Secret Pass at ang iyong IGN. Pwedeng i-test ang mic bago pumasok.</p>
+            <p>Ilagay ang Secret Pass (`pogikokaasar`) at ang iyong IGN.</p>
             <input type="password" id="secret-pass-input" placeholder="Secret Pass">
             <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 12px;">
             <button class="test-mic-btn" id="test-mic-ui-btn" onclick="toggleMicTest()">🎙️ I-test ang Mic (Off)</button>
@@ -97,7 +94,6 @@
         </div>
     </div>
 
-    <!-- SCREEN 2: Discord Layout -->
     <div id="chat-screen" style="display: none; width: 100vw; height: 100vh;">
         <div style="display: flex; width: 100%; height: 100%;">
             <div class="servers-sidebar">
@@ -153,7 +149,7 @@
                 <div class="stage-content">
                     <div class="welcome-box" style="text-align: center;">
                         <h2>Naka-connect ka na! 🎙️</h2>
-                        <p>May Noise Cancellation na ito. Pwede mo ring i-click ang gear/slider icon sa tabi ng pangalan ng tropa sa sidebar para baguhin ang volume niya lang.</p>
+                        <p>Kusa nang mawawala sa listahan ang sinumang mag-End Call o maputol ang koneksyon.</p>
                     </div>
                 </div>
             </div>
@@ -174,11 +170,10 @@
         let currentSoundVolume = 1;
         let isTestingMic = false;
         let testAudioElement = null;
-        let testStreamSource = null;
 
         const activeConnections = {};
         const peerStates = {}; 
-        const userGainNodes = {}; // Taguan ng individual gain nodes para sa bawat user volume control
+        const userGainNodes = {}; 
         const MASTER_ROOM_ID = "buyout_lounge_master_room_pogikokaasar_v1";
 
         async function toggleMicTest() {
@@ -190,19 +185,15 @@
                     });
                     if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     
-                    testStreamSource = audioContext.createMediaStreamSource(testStream);
                     testAudioElement = document.createElement('audio');
                     testAudioElement.srcObject = testStream;
                     testAudioElement.autoplay = true;
-                    // I-mute para walang feedback loop sa sariling speaker habang nagte-test
-                    testAudioElement.muted = false; 
-
                     document.body.appendChild(testAudioElement);
                     isTestingMic = true;
                     btn.classList.add('testing');
                     btn.innerHTML = '🛑 Itigil ang Mic Test';
                 } catch(e) {
-                    alert('Hindi ma-access ang mikropono para sa test.');
+                    alert('Hindi ma-access ang mikropono.');
                 }
             } else {
                 if (testAudioElement && testAudioElement.srcObject) {
@@ -216,10 +207,7 @@
         }
 
         async function verifyAndJoin() {
-            // Kung naka-on ang mic test, patayin muna bago pumasok sa call
-            if (isTestingMic) {
-                toggleMicTest();
-            }
+            if (isTestingMic) toggleMicTest();
 
             const passInput = document.getElementById('secret-pass-input').value.trim();
             myIGN = document.getElementById('ign-input').value.trim();
@@ -235,13 +223,8 @@
             }
 
             try {
-                // Humingi ng mic access na may built-in Noise Cancellation at Echo Cancellation
                 const rawStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: { 
-                        echoCancellation: true, 
-                        noiseSuppression: true, 
-                        autoGainControl: true 
-                    }, 
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, 
                     video: false 
                 });
                 
@@ -277,6 +260,7 @@
                 call.on('stream', (remoteStream) => {
                     playAudioStream(call.peer, remoteStream);
                 });
+                call.on('close', () => removePeerCompletely(call.peer));
             });
 
             peer.on('connection', (conn) => {
@@ -318,6 +302,8 @@
                 hostPeer.on('connection', (conn) => {
                     conn.on('data', (data) => {
                         if (data.type === 'JOIN') {
+                            // Iwasan ang duplicate kung sakaling nag-reconnect
+                            roomPeers = roomPeers.filter(p => p.peerId !== data.peerId);
                             roomPeers.push({ peerId: data.peerId, ign: data.ign, muted: data.muted, deafened: data.deafened });
                             peerStates[data.peerId] = { ign: data.ign, muted: data.muted, deafened: data.deafened };
 
@@ -335,6 +321,10 @@
                                 peerStates[data.peerId].deafened = data.deafened;
                                 updateAllPeersStatus(data.peerId, data.muted, data.deafened);
                             }
+                        } else if (data.type === 'LEAVE') {
+                            roomPeers = roomPeers.filter(p => p.peerId !== data.peerId);
+                            removePeerCompletely(data.peerId);
+                            broadcastLeaveToOthers(data.peerId);
                         }
                     });
                 });
@@ -348,6 +338,13 @@
             } catch(e) {}
         }
 
+        function broadcastLeaveToOthers(peerId) {
+            Object.keys(activeConnections).forEach(id => {
+                let c = peer.connect(id);
+                c.on('open', () => c.send({ type: 'LEAVE', peerId }));
+            });
+        }
+
         function callPeer(peerId, ign) {
             if (activeConnections[peerId]) return;
             activeConnections[peerId] = true;
@@ -357,20 +354,22 @@
                 call.on('stream', (remoteStream) => {
                     playAudioStream(peerId, remoteStream, ign);
                 });
+                call.on('close', () => removePeerCompletely(peerId));
             }
 
             const conn = peer.connect(peerId);
+            setupDataConnection(conn);
             conn.on('open', () => {
                 conn.send({ type: 'HELLO', ign: myIGN, muted: isMuted, deafened: isDeafened });
-            });
-            conn.on('data', (data) => {
-                handleDataMessage(data, peerId);
             });
         }
 
         function setupDataConnection(conn) {
             conn.on('data', (data) => {
                 handleDataMessage(data, conn.peer);
+            });
+            conn.on('close', () => {
+                removePeerCompletely(conn.peer);
             });
         }
 
@@ -396,6 +395,8 @@
                     }
                 }
                 updateUserListUI();
+            } else if (data.type === 'LEAVE') {
+                removePeerCompletely(data.peerId);
             }
         }
 
@@ -418,10 +419,23 @@
             });
         }
 
+        function removePeerCompletely(peerId) {
+            if (peerStates[peerId]) {
+                showToast(`${peerStates[peerId].ign} ay umalis sa channel 👋`);
+            }
+            delete peerStates[peerId];
+            delete activeConnections[peerId];
+            delete userGainNodes[peerId];
+
+            const audioEl = document.getElementById('audio_' + peerId);
+            if (audioEl) audioEl.remove();
+
+            updateUserListUI();
+        }
+
         function playAudioStream(peerId, stream, customName = "") {
             if (document.getElementById('audio_' + peerId)) return;
 
-            // Gamitin ang Web Audio API para sa per-user volume node routing
             if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
             const source = audioContext.createMediaStreamSource(stream);
             const gainNode = audioContext.createGain();
@@ -452,33 +466,24 @@
         }
 
         function changeMicVolume(val) {
-            if (micGainNode) {
-                micGainNode.gain.value = parseFloat(val);
-            }
+            if (micGainNode) micGainNode.gain.value = parseFloat(val);
         }
 
         function changeSoundVolume(val) {
             currentSoundVolume = parseFloat(val);
-            // Baguhin ang lahat ng user gain nodes maliban kung may sariling custom volume ang user
             for (const [peerId, gainNode] of Object.entries(userGainNodes)) {
                 const slider = document.getElementById('user_vol_input_' + peerId);
-                if (!slider) {
-                    gainNode.gain.value = currentSoundVolume;
-                }
+                if (!slider) gainNode.gain.value = currentSoundVolume;
             }
         }
 
         function changeUserVolume(peerId, val) {
-            if (userGainNodes[peerId]) {
-                userGainNodes[peerId].gain.value = parseFloat(val);
-            }
+            if (userGainNodes[peerId]) userGainNodes[peerId].gain.value = parseFloat(val);
         }
 
         function toggleUserVolBox(peerId) {
             const box = document.getElementById('vol_box_' + peerId);
-            if (box) {
-                box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
-            }
+            if (box) box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
         }
 
         function toggleMute() {
@@ -509,9 +514,7 @@
             const deafenBtn = document.getElementById('deafen-btn');
             
             const audioElements = document.querySelectorAll('#audio-container audio');
-            audioElements.forEach(audio => {
-                audio.muted = isDeafened;
-            });
+            audioElements.forEach(audio => audio.muted = isDeafened);
 
             if (isDeafened) {
                 deafenBtn.classList.add('active');
@@ -530,12 +533,17 @@
         }
 
         function leaveCall() {
-            if (localStream) {
-                localStream.getTracks().forEach(track => track.stop());
+            // I-notify ang iba na aalis ka na
+            if (peer && peer.id) {
+                try {
+                    const masterConn = peer.connect(MASTER_ROOM_ID);
+                    masterConn.on('open', () => masterConn.send({ type: 'LEAVE', peerId: peer.id }));
+                    broadcastLeaveToOthers(peer.id);
+                } catch(e) {}
             }
-            if (peer) {
-                peer.destroy();
-            }
+
+            if (localStream) localStream.getTracks().forEach(track => track.stop());
+            if (peer) peer.destroy();
             window.location.reload();
         }
 
@@ -553,17 +561,14 @@
 
                 let displayName = data.ign;
                 const isMe = id === (peer ? peer.id : '');
-                if (isMe) {
-                    displayName += " (Ikaw)";
-                }
+                if (isMe) displayName += " (Ikaw)";
 
-                // Huwag lagyan ng volume slider ang sarili mo
                 let toolsHTML = `<div class="user-icons">${iconsHTML}</div>`;
                 let volumeBoxHTML = '';
 
                 if (!isMe) {
                     toolsHTML = `
-                        <button class="mini-btn" onclick="toggleUserVolBox('${id}')" title="Volume ng User na ito"><i class="fa-solid fa-sliders"></i></button>
+                        <button class="mini-btn" onclick="toggleUserVolBox('${id}')" title="Volume ng User"><i class="fa-solid fa-sliders"></i></button>
                         <div class="user-icons">${iconsHTML}</div>
                     `;
                     volumeBoxHTML = `
@@ -580,9 +585,7 @@
                             <div class="user-avatar">🎮</div>
                             <span>${displayName}</span>
                         </div>
-                        <div class="user-right-tools">
-                            ${toolsHTML}
-                        </div>
+                        <div class="user-right-tools">${toolsHTML}</div>
                     </div>
                     ${volumeBoxHTML}
                 `;
@@ -596,9 +599,7 @@
             toast.className = 'toast';
             toast.innerText = message;
             container.appendChild(toast);
-            setTimeout(() => {
-                toast.remove();
-            }, 3000);
+            setTimeout(() => toast.remove(), 3000);
         }
     </script>
 </body>
