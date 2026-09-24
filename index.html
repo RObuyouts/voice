@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BuyOut Lounge - Secure Voice Channel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PeerJS para sa libreng P2P connection -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'GG Sans', sans-serif; }
@@ -56,7 +57,7 @@
 </head>
 <body>
 
-    <!-- SCREEN 1: Login Gate (Secret Pass + IGN) -->
+    <!-- SCREEN 1: Login Gate -->
     <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
         <div class="welcome-box">
             <h2>BuyOut Lounge 🧈</h2>
@@ -67,16 +68,14 @@
         </div>
     </div>
 
-    <!-- SCREEN 2: Discord Layout kapag nakapasok na -->
+    <!-- SCREEN 2: Discord Layout -->
     <div id="chat-screen" style="display: none; width: 100vw; height: 100vh;">
         <div style="display: flex; width: 100%; height: 100%;">
-            <!-- Servers Sidebar -->
             <div class="servers-sidebar">
                 <div class="server-icon"><img src="https://images.unsplash.com/photo-1589985270826-4b7bb135bc9d?w=100&auto=format&fit=crop&q=80" alt="Butter"></div>
                 <div class="server-separator"></div>
             </div>
 
-            <!-- Channels Sidebar -->
             <div class="channels-sidebar">
                 <div class="server-header"><span>BuyOut Lounge</span></div>
                 <div class="channels-list">
@@ -95,11 +94,9 @@
                         </div>
                     </div>
                     <div class="profile-controls">
-                        <!-- Mute Button -->
                         <button class="control-btn" id="mute-btn" onclick="toggleMute()" title="Mute">
                             <i class="fa-solid fa-microphone"></i>
                         </button>
-                        <!-- Deafen Button -->
                         <button class="control-btn" id="deafen-btn" onclick="toggleDeafen()" title="Deafen">
                             <i class="fa-solid fa-headphones"></i>
                         </button>
@@ -107,7 +104,6 @@
                 </div>
             </div>
 
-            <!-- Main Stage -->
             <div class="main-stage">
                 <div class="stage-header">
                     <span><i class="fa-solid fa-volume-high"></i> BuyOut Voice Channel</span>
@@ -116,14 +112,13 @@
                 <div class="stage-content">
                     <div class="welcome-box" style="text-align: center;">
                         <h2>Naka-connect ka na sa Voice Chat! 🎙️</h2>
-                        <p>Lahat ng pumasok gamit ang tamang pass ay magkakarinigan dito. Pwede mong i-mute o i-deafen ang iyong sarili gamit ang mga pindutan sa ibaba.</p>
+                        <p>Lahat ng pumasok gamit ang tamang pass at IGN ay magkakasama na rito at magkakarinigan.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Audio container para sa mga boses ng iba -->
     <div id="audio-container"></div>
 
     <script>
@@ -158,22 +153,38 @@
             document.getElementById('chat-screen').style.display = 'block';
             document.getElementById('my-display-ign').innerText = myIGN;
 
-            addUserToList(myIGN, 'my_self');
+            addUserToList(myIGN, 'self_' + Math.random());
 
-            // Gamit ang PeerJS room protocol para magkita-kita ang mga gumagamit ng secret pass
-            peer = new Peer('buyout_room_' + Math.floor(Math.random() * 100000));
+            // Gagamit tayo ng nakapirming room identifier base sa secret pass
+            // Para magkita-kita ang mga gumagamit nito, gumagamit tayo ng PeerJS prefix room id
+            const roomId = "buyout_lounge_pogikokaasar_" + Math.floor(Math.random() * 1000);
+            peer = new Peer(roomId);
 
             peer.on('open', (id) => {
-                console.log('Online ID:', id);
+                console.log('My Peer ID:', id);
             });
 
-            // Kapag may pumasok at tumawag sa iyo
+            // Kapag may iba pang pumasok at tumawag
             peer.on('call', (call) => {
                 call.answer(localStream);
                 call.on('stream', (remoteStream) => {
                     playAudioStream(call.peer, remoteStream);
                 });
             });
+
+            // Para makakonekta agad sa iba pang nauna nang pumasok sa parehong room
+            // Mag-broadcast tayo ng tawag sa general room channel pool
+            setTimeout(() => {
+                const targetPeerId = "buyout_lounge_pogikokaasar_host"; // shared host handle
+                if (id !== targetPeerId) {
+                    const call = peer.call(targetPeerId, localStream);
+                    if (call) {
+                        call.on('stream', (remoteStream) => {
+                            playAudioStream(call.peer, remoteStream);
+                        });
+                    }
+                }
+            }, 1500);
         }
 
         function playAudioStream(peerId, stream) {
@@ -182,13 +193,12 @@
             audio.id = 'audio_' + peerId;
             audio.srcObject = stream;
             audio.autoplay = true;
-            if (isDeafened) audio.muted = true; // Kung deafened ka, hindi mo rin maririnig
+            if (isDeafened) audio.muted = true;
             document.getElementById('audio-container').appendChild(audio);
 
-            addUserToList('Kasapi ng Tropa', peerId);
+            addUserToList('Kasapi (' + peerId.substring(0, 5) + ')', peerId);
         }
 
-        // MUTE BUTTON
         function toggleMute() {
             if (!localStream) return;
             isMuted = !isMuted;
@@ -203,12 +213,10 @@
             }
         }
 
-        // DEAFEN BUTTON (Naka-mute ka na, tapos di mo rinig ang iba)
         function toggleDeafen() {
             isDeafened = !isDeafened;
             const deafenBtn = document.getElementById('deafen-btn');
             
-            // I-mute/unmute lahat ng remote audio elements
             const audioElements = document.querySelectorAll('#audio-container audio');
             audioElements.forEach(audio => {
                 audio.muted = isDeafened;
@@ -217,14 +225,13 @@
             if (isDeafened) {
                 deafenBtn.classList.add('active');
                 deafenBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-                if (!isMuted) toggleMute(); // Auto-mute din kapag deafened (Discord style)
+                if (!isMuted) toggleMute();
             } else {
                 deafenBtn.classList.remove('active');
                 deafenBtn.innerHTML = '<i class="fa-solid fa-headphones"></i>';
             }
         }
 
-        // END CALL / LEAVE BUTTON
         function leaveCall() {
             if (localStream) {
                 localStream.getTracks().forEach(track => track.stop());
@@ -232,7 +239,7 @@
             if (peer) {
                 peer.destroy();
             }
-            window.location.reload(); // I-refresh para bumalik sa login screen
+            window.location.reload();
         }
 
         function addUserToList(name, id) {
