@@ -15,7 +15,7 @@
         .server-icon img { width: 100%; height: 100%; object-fit: cover; }
         .server-separator { width: 32px; height: 2px; background-color: #3f4147; border-radius: 1px; }
 
-        .channels-sidebar { width: 260px; background-color: #2f3136; display: flex; flex-direction: column; }
+        .channels-sidebar { width: 280px; background-color: #2f3136; display: flex; flex-direction: column; }
         .server-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-weight: bold; color: #fff; border-bottom: 2px solid #202225; }
         .channels-list { flex: 1; padding: 16px 8px; overflow-y: auto; }
         .category-title { font-size: 12px; font-weight: bold; color: #8e9297; text-transform: uppercase; margin-bottom: 4px; padding: 0 8px; }
@@ -23,11 +23,17 @@
         .channel-item { display: flex; flex-direction: column; margin-bottom: 4px; border-radius: 4px; }
         .channel-main { display: flex; align-items: center; padding: 8px; border-radius: 4px; color: #fff; background-color: #393c43; gap: 8px; }
         
-        .channel-users { padding-left: 12px; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-        .voice-user { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 4px; font-size: 14px; color: #fff; background-color: #34373c; }
-        .user-left { display: flex; align-items: center; gap: 8px; }
-        .user-icons { display: flex; gap: 6px; font-size: 12px; color: #ed4245; }
-        .user-avatar { width: 24px; height: 24px; border-radius: 50%; background-color: #7289da; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
+        .channel-users { padding-left: 12px; display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+        .voice-user { display: flex; flex-direction: column; padding: 6px 8px; border-radius: 4px; font-size: 14px; color: #fff; background-color: #34373c; gap: 4px; }
+        .user-row-top { display: flex; align-items: center; justify-content: space-between; width: 100%; }
+        .user-left { display: flex; align-items: center; gap: 8px; overflow: hidden; }
+        .user-right-tools { display: flex; align-items: center; gap: 6px; }
+        .user-icons { display: flex; gap: 4px; font-size: 12px; color: #ed4245; }
+        .user-avatar { width: 24px; height: 24px; border-radius: 50%; background-color: #7289da; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; flex-shrink: 0; }
+        
+        /* Individual User Volume Slider Box */
+        .user-vol-box { display: none; align-items: center; justify-content: space-between; font-size: 11px; background: #202225; padding: 4px 6px; border-radius: 3px; color: #b9bbbe; width: 100%; margin-top: 2px; }
+        .user-vol-box input { width: 110px; accent-color: #7289da; cursor: pointer; }
 
         .user-profile-bar { background-color: #292b2f; display: flex; flex-direction: column; padding: 8px; gap: 6px; border-top: 1px solid #202225; }
         .profile-main-row { display: flex; align-items: center; gap: 8px; }
@@ -38,11 +44,13 @@
         
         .volume-settings { display: flex; flex-direction: column; gap: 4px; background-color: #202225; padding: 6px 8px; border-radius: 4px; font-size: 11px; color: #b9bbbe; }
         .volume-slider-group { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-        .volume-slider-group input { width: 120px; accent-color: #7289da; cursor: pointer; }
+        .volume-slider-group input { width: 130px; accent-color: #7289da; cursor: pointer; }
 
         .control-btn { background: none; border: none; color: #b9bbbe; width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .control-btn:hover { background-color: #34373c; color: #dcddde; }
         .control-btn.active { color: #ed4245; }
+        .mini-btn { background: none; border: none; color: #b9bbbe; cursor: pointer; font-size: 12px; padding: 2px 4px; border-radius: 3px; }
+        .mini-btn:hover { background-color: #393c43; color: #fff; }
 
         .main-stage { flex: 1; display: flex; flex-direction: column; background-color: #36393f; }
         .stage-header { height: 48px; border-bottom: 2px solid #202225; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-weight: bold; color: #fff; }
@@ -52,9 +60,13 @@
         .welcome-box h2 { color: #fff; margin-bottom: 12px; }
         .welcome-box p { color: #8e9297; font-size: 14px; margin-bottom: 20px; }
         
-        .connect-btn { background-color: #3ba55d; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; }
+        .connect-btn { background-color: #3ba55d; color: #fff; border: none; padding: 10px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px; margin-bottom: 8px; }
         .connect-btn:hover { background-color: #2d8147; }
         
+        .test-mic-btn { background-color: #4f545c; color: #fff; border: none; padding: 8px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px; margin-bottom: 12px; }
+        .test-mic-btn:hover { background-color: #686d73; }
+        .test-mic-btn.testing { background-color: #ed4245; }
+
         .disconnect-btn { background-color: #ed4245; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
         .disconnect-btn:hover { background-color: #c03537; }
 
@@ -77,9 +89,10 @@
     <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
         <div class="welcome-box">
             <h2>BuyOut Lounge 🧈</h2>
-            <p>Ilagay ang Secret Pass at ang iyong IGN para pumasok.</p>
+            <p>Ilagay ang Secret Pass at ang iyong IGN. Pwedeng i-test ang mic bago pumasok.</p>
             <input type="password" id="secret-pass-input" placeholder="Secret Pass">
-            <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 20px;">
+            <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 12px;">
+            <button class="test-mic-btn" id="test-mic-ui-btn" onclick="toggleMicTest()">🎙️ I-test ang Mic (Off)</button>
             <button class="connect-btn" onclick="verifyAndJoin()">Pumasok sa Voice Channel</button>
         </div>
     </div>
@@ -140,7 +153,7 @@
                 <div class="stage-content">
                     <div class="welcome-box" style="text-align: center;">
                         <h2>Naka-connect ka na! 🎙️</h2>
-                        <p>Kontrolin ang volume ng mic o sound sa ibaba, at tingnan kung sino ang naka-mute sa sidebar.</p>
+                        <p>May Noise Cancellation na ito. Pwede mo ring i-click ang gear/slider icon sa tabi ng pangalan ng tropa sa sidebar para baguhin ang volume niya lang.</p>
                     </div>
                 </div>
             </div>
@@ -159,12 +172,55 @@
         let isMuted = false;
         let isDeafened = false;
         let currentSoundVolume = 1;
-        const activeConnections = {};
-        const peerStates = {}; // Tracker ng mute/deafen status ng iba
+        let isTestingMic = false;
+        let testAudioElement = null;
+        let testStreamSource = null;
 
+        const activeConnections = {};
+        const peerStates = {}; 
+        const userGainNodes = {}; // Taguan ng individual gain nodes para sa bawat user volume control
         const MASTER_ROOM_ID = "buyout_lounge_master_room_pogikokaasar_v1";
 
+        async function toggleMicTest() {
+            const btn = document.getElementById('test-mic-ui-btn');
+            if (!isTestingMic) {
+                try {
+                    const testStream = await navigator.mediaDevices.getUserMedia({ 
+                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } 
+                    });
+                    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    testStreamSource = audioContext.createMediaStreamSource(testStream);
+                    testAudioElement = document.createElement('audio');
+                    testAudioElement.srcObject = testStream;
+                    testAudioElement.autoplay = true;
+                    // I-mute para walang feedback loop sa sariling speaker habang nagte-test
+                    testAudioElement.muted = false; 
+
+                    document.body.appendChild(testAudioElement);
+                    isTestingMic = true;
+                    btn.classList.add('testing');
+                    btn.innerHTML = '🛑 Itigil ang Mic Test';
+                } catch(e) {
+                    alert('Hindi ma-access ang mikropono para sa test.');
+                }
+            } else {
+                if (testAudioElement && testAudioElement.srcObject) {
+                    testAudioElement.srcObject.getTracks().forEach(track => track.stop());
+                    testAudioElement.remove();
+                }
+                isTestingMic = false;
+                btn.classList.remove('testing');
+                btn.innerHTML = '🎙️ I-test ang Mic (Off)';
+            }
+        }
+
         async function verifyAndJoin() {
+            // Kung naka-on ang mic test, patayin muna bago pumasok sa call
+            if (isTestingMic) {
+                toggleMicTest();
+            }
+
             const passInput = document.getElementById('secret-pass-input').value.trim();
             myIGN = document.getElementById('ign-input').value.trim();
 
@@ -179,10 +235,17 @@
             }
 
             try {
-                const rawStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                // Humingi ng mic access na may built-in Noise Cancellation at Echo Cancellation
+                const rawStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: { 
+                        echoCancellation: true, 
+                        noiseSuppression: true, 
+                        autoGainControl: true 
+                    }, 
+                    video: false 
+                });
                 
-                // Web Audio API para sa mic gain/volume control
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(rawStream);
                 micGainNode = audioContext.createGain();
                 micGainNode.gain.value = 1.0;
@@ -337,7 +400,6 @@
         }
 
         function updateAllPeersStatus(peerId, muted, deafened) {
-            // Broadcast status sa iba kung sakaling host
             Object.keys(activeConnections).forEach(id => {
                 let c = peer.connect(id);
                 c.on('open', () => c.send({ type: 'STATUS_UPDATE', peerId, muted, deafened }));
@@ -358,11 +420,23 @@
 
         function playAudioStream(peerId, stream, customName = "") {
             if (document.getElementById('audio_' + peerId)) return;
+
+            // Gamitin ang Web Audio API para sa per-user volume node routing
+            if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            const gainNode = audioContext.createGain();
+            gainNode.gain.value = currentSoundVolume;
+            
+            source.connect(gainNode);
+            const dest = audioContext.createMediaStreamDestination();
+            gainNode.connect(dest);
+
+            userGainNodes[peerId] = gainNode;
+
             const audio = document.createElement('audio');
             audio.id = 'audio_' + peerId;
-            audio.srcObject = stream;
+            audio.srcObject = dest.stream;
             audio.autoplay = true;
-            audio.volume = currentSoundVolume;
             if (isDeafened) audio.muted = true;
             document.getElementById('audio-container').appendChild(audio);
 
@@ -385,10 +459,26 @@
 
         function changeSoundVolume(val) {
             currentSoundVolume = parseFloat(val);
-            const audioElements = document.querySelectorAll('#audio-container audio');
-            audioElements.forEach(audio => {
-                audio.volume = currentSoundVolume;
-            });
+            // Baguhin ang lahat ng user gain nodes maliban kung may sariling custom volume ang user
+            for (const [peerId, gainNode] of Object.entries(userGainNodes)) {
+                const slider = document.getElementById('user_vol_input_' + peerId);
+                if (!slider) {
+                    gainNode.gain.value = currentSoundVolume;
+                }
+            }
+        }
+
+        function changeUserVolume(peerId, val) {
+            if (userGainNodes[peerId]) {
+                userGainNodes[peerId].gain.value = parseFloat(val);
+            }
+        }
+
+        function toggleUserVolBox(peerId) {
+            const box = document.getElementById('vol_box_' + peerId);
+            if (box) {
+                box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
+            }
         }
 
         function toggleMute() {
@@ -462,16 +552,39 @@
                 if (data.deafened) iconsHTML += '<i class="fa-solid fa-volume-xmark" title="Deafened"></i>';
 
                 let displayName = data.ign;
-                if (id === (peer ? peer.id : '')) {
+                const isMe = id === (peer ? peer.id : '');
+                if (isMe) {
                     displayName += " (Ikaw)";
                 }
 
+                // Huwag lagyan ng volume slider ang sarili mo
+                let toolsHTML = `<div class="user-icons">${iconsHTML}</div>`;
+                let volumeBoxHTML = '';
+
+                if (!isMe) {
+                    toolsHTML = `
+                        <button class="mini-btn" onclick="toggleUserVolBox('${id}')" title="Volume ng User na ito"><i class="fa-solid fa-sliders"></i></button>
+                        <div class="user-icons">${iconsHTML}</div>
+                    `;
+                    volumeBoxHTML = `
+                        <div class="user-vol-box" id="vol_box_${id}">
+                            <span>Vol:</span>
+                            <input type="range" id="user_vol_input_${id}" min="0" max="2" step="0.1" value="1" oninput="changeUserVolume('${id}', this.value)">
+                        </div>
+                    `;
+                }
+
                 userDiv.innerHTML = `
-                    <div class="user-left">
-                        <div class="user-avatar">🎮</div>
-                        <span>${displayName}</span>
+                    <div class="user-row-top">
+                        <div class="user-left">
+                            <div class="user-avatar">🎮</div>
+                            <span>${displayName}</span>
+                        </div>
+                        <div class="user-right-tools">
+                            ${toolsHTML}
+                        </div>
                     </div>
-                    <div class="user-icons">${iconsHTML}</div>
+                    ${volumeBoxHTML}
                 `;
                 list.appendChild(userDiv);
             }
