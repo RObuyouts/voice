@@ -44,6 +44,7 @@
         .volume-settings { display: flex; flex-direction: column; gap: 4px; background-color: #202225; padding: 6px 8px; border-radius: 4px; font-size: 11px; color: #b9bbbe; }
         .volume-slider-group { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
         .volume-slider-group input { width: 130px; accent-color: #7289da; cursor: pointer; }
+        .volume-slider-group select { background: #2f3136; color: #fff; border: 1px solid #202225; border-radius: 3px; padding: 2px; font-size: 11px; cursor: pointer; width: 130px; }
 
         .control-btn { background: none; border: none; color: #b9bbbe; width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .control-btn:hover { background-color: #34373c; color: #dcddde; }
@@ -86,7 +87,7 @@
     <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
         <div class="welcome-box">
             <h2>BuyOut Lounge 🧈</h2>
-            <p>Ilagay ang Secret Pass (`pogikokaasar`) at ang iyong IGN.</p>
+            <p>Ilagay ang Secret Pass at ang iyong IGN.</p>
             <input type="password" id="secret-pass-input" placeholder="Secret Pass">
             <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 12px;">
             <button class="test-mic-btn" id="test-mic-ui-btn" onclick="toggleMicTest()">🎙️ I-test ang Mic (Off)</button>
@@ -120,6 +121,15 @@
                             <span><i class="fa-solid fa-volume-high"></i> Sound Vol:</span>
                             <input type="range" id="sound-volume-slider" min="0" max="2" step="0.1" value="1" oninput="changeSoundVolume(this.value)">
                         </div>
+                        <div class="volume-slider-group">
+                            <span><i class="fa-solid fa-masks-theater"></i> Voice FX:</span>
+                            <select id="voice-changer-select" onchange="changeVoiceEffect(this.value)">
+                                <option value="normal">Normal (Default)</option>
+                                <option value="female">Boses Babae 👩</option>
+                                <option value="baby">Boses Baby 👶</option>
+                                <option value="deep">Boses Demonyo/Robot 🤖</option>
+                            </select>
+                        </div>
                     </div>
                     <div class="profile-main-row">
                         <div class="profile-info">
@@ -149,7 +159,7 @@
                 <div class="stage-content">
                     <div class="welcome-box" style="text-align: center;">
                         <h2>Naka-connect ka na! 🎙️</h2>
-                        <p>Kusa nang mawawala sa listahan ang sinumang mag-End Call o maputol ang koneksyon.</p>
+                        <p>Subukan ang bagong Voice Changer option sa ibaba para maging Boses Babae o Boses Baby!</p>
                     </div>
                 </div>
             </div>
@@ -163,6 +173,7 @@
         let localStream;
         let audioContext;
         let micGainNode;
+        let biquadFilter;
         let peer;
         let myIGN = "";
         let isMuted = false;
@@ -230,12 +241,24 @@
                 
                 if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const source = audioContext.createMediaStreamSource(rawStream);
+                
+                // Mic Gain Node
                 micGainNode = audioContext.createGain();
                 micGainNode.gain.value = 1.0;
-                
+
+                // Voice Effect Filter (Biquad Filter para sa Pitch/Tone Shift effect)
+                biquadFilter = audioContext.createBiquadFilter();
+                biquadFilter.type = "peaking";
+                biquadFilter.frequency.value = 1000;
+                biquadFilter.gain.value = 0; // Default normal
+
                 const destination = audioContext.createMediaStreamDestination();
+                
+                // Connect Audio Pipeline: Source -> MicGain -> BiquadFilter -> Destination
                 source.connect(micGainNode);
-                micGainNode.connect(destination);
+                micGainNode.connect(biquadFilter);
+                biquadFilter.connect(destination);
+
                 localStream = destination.stream;
             } catch (err) {
                 alert("Kailangan ang mikropono para sa voice chat!");
@@ -266,6 +289,33 @@
             peer.on('connection', (conn) => {
                 setupDataConnection(conn);
             });
+        }
+
+        function changeVoiceEffect(effect) {
+            if (!biquadFilter || !audioContext) return;
+
+            if (effect === 'female') {
+                // Taasan ang frequency at gain para maging manipis/boses babae
+                biquadFilter.type = "highpass";
+                biquadFilter.frequency.value = 450; 
+                showToast("Voice FX: Boses Babae 👩");
+            } else if (effect === 'baby') {
+                // Mas mataas na frequency para maging boses baby
+                biquadFilter.type = "highpass";
+                biquadFilter.frequency.value = 750;
+                showToast("Voice FX: Boses Baby 👶");
+            } else if (effect === 'deep') {
+                // Mababang frequency para sa demonyo/robot/deep voice
+                biquadFilter.type = "lowpass";
+                biquadFilter.frequency.value = 300;
+                showToast("Voice FX: Boses Demonyo/Robot 🤖");
+            } else {
+                // Normal
+                biquadFilter.type = "peaking";
+                biquadFilter.frequency.value = 1000;
+                biquadFilter.gain.value = 0;
+                showToast("Voice FX: Normal 🎙️");
+            }
         }
 
         function connectToMasterRoom(myId) {
@@ -302,7 +352,6 @@
                 hostPeer.on('connection', (conn) => {
                     conn.on('data', (data) => {
                         if (data.type === 'JOIN') {
-                            // Iwasan ang duplicate kung sakaling nag-reconnect
                             roomPeers = roomPeers.filter(p => p.peerId !== data.peerId);
                             roomPeers.push({ peerId: data.peerId, ign: data.ign, muted: data.muted, deafened: data.deafened });
                             peerStates[data.peerId] = { ign: data.ign, muted: data.muted, deafened: data.deafened };
@@ -533,7 +582,6 @@
         }
 
         function leaveCall() {
-            // I-notify ang iba na aalis ka na
             if (peer && peer.id) {
                 try {
                     const masterConn = peer.connect(MASTER_ROOM_ID);
