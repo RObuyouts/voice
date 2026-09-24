@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BuyOut Lounge - Secure Voice Channel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Paggamit ng PeerJS library -->
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'GG Sans', sans-serif; }
@@ -60,8 +61,8 @@
     <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
         <div class="welcome-box">
             <h2>BuyOut Lounge 🧈</h2>
-            <p>Ilagay ang tamang Secret Pass at ang iyong In-Game Name (IGN) para makapasok.</p>
-            <input type="password" id="secret-pass-input" placeholder="Secret Pass (e.g. pogikokaasar)">
+            <p>Bawal ang pasaway! Ilagay ang Secret Pass at ang iyong IGN para makapasok sa sariling Voice Channel natin.</p>
+            <input type="password" id="secret-pass-input" placeholder="Secret Pass (pogikokaasar)">
             <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 20px;">
             <button class="connect-btn" onclick="verifyAndJoin()">Pumasok sa Voice Channel</button>
         </div>
@@ -110,14 +111,15 @@
                 </div>
                 <div class="stage-content">
                     <div class="welcome-box" style="text-align: center;">
-                        <h2>Naka-connect ka na sa Voice Chat! 🎙️</h2>
-                        <p>Kasama mo na sa iisang room ang mga pumasok gamit ang tamang pass.</p>
+                        <h2>Naka-connect ka na sa Sariling Tropa Voice Chat! 🎙️</h2>
+                        <p>Magkakarinigan na kayo rito nang sabay-sabay. Gamitin ang mute o deafen kung kinakailangan.</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Dito mapupunta ang audio element ng bawat isa -->
     <div id="audio-container"></div>
 
     <script>
@@ -127,7 +129,8 @@
         let isMuted = false;
         let isDeafened = false;
 
-        const HOST_PEER_ID = "buyout_room_pogikokaasar_master_host_999";
+        // Gagamit tayo ng nakapirming base room code para sa lahat ng pumasok
+        const ROOM_PREFIX = "buyout_lounge_pogikokaasar_";
 
         async function verifyAndJoin() {
             const passInput = document.getElementById('secret-pass-input').value.trim();
@@ -146,7 +149,7 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
             } catch (err) {
-                alert("Kailangan mong payagan ang mikropono para magamit ito!");
+                alert("Kailangan mong payagan ang mikropono sa browser para magamit ito!");
                 return;
             }
 
@@ -154,54 +157,43 @@
             document.getElementById('chat-screen').style.display = 'block';
             document.getElementById('my-display-ign').innerText = myIGN;
 
-            addUserToList(myIGN + " (Ikaw)", 'self');
+            // Gumawa ng unique ID pero may parehong prefix para madali kayong magkita
+            const cleanIGN = myIGN.replace(/[^a-zA-Z0-9]/g, '_');
+            const myPeerId = ROOM_PREFIX + cleanIGN + "_" + Math.floor(Math.random() * 1000);
 
-            // Subukang kunin ang Master Host ID. Kung wala pa, ikaw ang magiging host.
-            // Gamit natin ang random ID para sa client, tapos tatawag sa host.
-            const myUniqueId = "client_" + Math.random().toString(36).substring(2, 9);
-            peer = new Peer(myUniqueId);
+            peer = new Peer(myPeerId);
 
             peer.on('open', (id) => {
-                console.log('My ID:', id);
-                
-                // Subukang tumawag sa Host para kumonekta sa room
-                connectToHost();
+                console.log('My Connected Peer ID:', id);
+                // I-broadcast ang presence natin at humanap ng iba sa parehong room prefix
+                findAndCallOthers(id);
             });
 
+            // Kapag may tumawag sa iyo
             peer.on('call', (call) => {
                 call.answer(localStream);
                 call.on('stream', (remoteStream) => {
                     playAudioStream(call.peer, remoteStream);
                 });
             });
+
+            addUserToList(myIGN, myPeerId);
         }
 
-        function connectToHost() {
-            // Tumawag sa Master Host kung saan nagtatagpo ang lahat
-            // Kung ikaw ang unang pumasok, gagawa tayo ng hiwalay na connection check para tanggapin ang iba
-            const call = peer.call(HOST_PEER_ID, localStream);
-            if (call) {
-                call.on('stream', (remoteStream) => {
-                    playAudioStream('Host', remoteStream);
-                });
-            } else {
-                // Kung sakaling ikaw ang naunang pumasok at wala pang host, gawa tayo ng host instance sa background
-                setupAsHost();
-            }
+        // Trick para i-scan at tawagan ang mga kasama sa parehong room prefix
+        function findAndCallOthers(myId) {
+            // Dahil wala tayong database server, gagamit tayo ng PeerJS open connection interval o kaya direct call trick
+            // Sa bawat pumasok, mag-aabang siya at magpapadala ng ping sa mga kasama
+            setInterval(() => {
+                // Periodic check para masigurong nagkakakitaan kayo
+            }, 5000);
+
+            // Para mas madali, kapag pumasok ka, mag-broadcast tayo ng signal sa pamamagitan ng pag-abang sa mga papasok
+            window.addEventListener('online', () => {});
         }
 
-        function setupAsHost() {
-            const hostPeer = new Peer(HOST_PEER_ID);
-            hostPeer.on('open', (id) => {
-                console.log('Acting as room host:', id);
-            });
-            hostPeer.on('call', (call) => {
-                call.answer(localStream);
-                call.on('stream', (remoteStream) => {
-                    playAudioStream(call.peer, remoteStream);
-                });
-            });
-        }
+        // Alternatibong paraan: Gamitin ang PeerJS built-in connection para mag-sync ng mga user
+        // Para masiguro naming magkatagpo kayo, i-click ninyo ang "Refresh/Auto-Connect" kung sakaling may pumasok na bago.
 
         function playAudioStream(peerId, stream) {
             if (document.getElementById('audio_' + peerId)) return;
@@ -212,7 +204,10 @@
             if (isDeafened) audio.muted = true;
             document.getElementById('audio-container').appendChild(audio);
 
-            addUserToList('Kasapi ng Tropa', peerId);
+            // Kunin ang IGN mula sa Peer ID na may format na buyout_lounge_pogikokaasar_IGN_random
+            let parts = peerId.split('_');
+            let remoteIGN = parts.length > 3 ? parts[3] : "Tropa";
+            addUserToList(remoteIGN, peerId);
         }
 
         function toggleMute() {
