@@ -15,7 +15,7 @@
         .server-icon img { width: 100%; height: 100%; object-fit: cover; }
         .server-separator { width: 32px; height: 2px; background-color: #3f4147; border-radius: 1px; }
 
-        .channels-sidebar { width: 240px; background-color: #2f3136; display: flex; flex-direction: column; }
+        .channels-sidebar { width: 260px; background-color: #2f3136; display: flex; flex-direction: column; }
         .server-header { height: 48px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-weight: bold; color: #fff; border-bottom: 2px solid #202225; }
         .channels-list { flex: 1; padding: 16px 8px; overflow-y: auto; }
         .category-title { font-size: 12px; font-weight: bold; color: #8e9297; text-transform: uppercase; margin-bottom: 4px; padding: 0 8px; }
@@ -24,15 +24,22 @@
         .channel-main { display: flex; align-items: center; padding: 8px; border-radius: 4px; color: #fff; background-color: #393c43; gap: 8px; }
         
         .channel-users { padding-left: 12px; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
-        .voice-user { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 4px; font-size: 14px; color: #fff; background-color: #34373c; }
+        .voice-user { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; border-radius: 4px; font-size: 14px; color: #fff; background-color: #34373c; }
+        .user-left { display: flex; align-items: center; gap: 8px; }
+        .user-icons { display: flex; gap: 6px; font-size: 12px; color: #ed4245; }
         .user-avatar { width: 24px; height: 24px; border-radius: 50%; background-color: #7289da; display: flex; align-items: center; justify-content: center; font-size: 12px; color: #fff; }
 
-        .user-profile-bar { height: 52px; background-color: #292b2f; display: flex; align-items: center; padding: 0 8px; gap: 8px; }
+        .user-profile-bar { background-color: #292b2f; display: flex; flex-direction: column; padding: 8px; gap: 6px; border-top: 1px solid #202225; }
+        .profile-main-row { display: flex; align-items: center; gap: 8px; }
         .profile-info { display: flex; align-items: center; gap: 8px; flex: 1; overflow: hidden; }
         .profile-name { font-size: 14px; font-weight: 600; color: #fff; }
         .profile-status { font-size: 12px; color: #3ba55d; }
         .profile-controls { display: flex; gap: 2px; }
         
+        .volume-settings { display: flex; flex-direction: column; gap: 4px; background-color: #202225; padding: 6px 8px; border-radius: 4px; font-size: 11px; color: #b9bbbe; }
+        .volume-slider-group { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .volume-slider-group input { width: 120px; accent-color: #7289da; cursor: pointer; }
+
         .control-btn { background: none; border: none; color: #b9bbbe; width: 32px; height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
         .control-btn:hover { background-color: #34373c; color: #dcddde; }
         .control-btn.active { color: #ed4245; }
@@ -52,6 +59,16 @@
         .disconnect-btn:hover { background-color: #c03537; }
 
         input[type="text"], input[type="password"] { background: #202225; border: 1px solid #202225; color: #fff; padding: 12px; border-radius: 4px; width: 100%; margin-bottom: 12px; font-size: 15px; text-align: center; font-weight: bold; }
+
+        /* Notification Toast */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; display: flex; flex-direction: column; gap: 8px; z-index: 999; }
+        .toast { background-color: #18191c; color: #dcddde; padding: 10px 16px; border-radius: 6px; box-shadow: 0 4px 12px rgba(0,0,0,0.4); font-size: 13px; border-left: 4px solid #7289da; animation: fadeInOut 3s forwards; }
+        @keyframes fadeInOut { 
+            0% { opacity: 0; transform: translateY(10px); } 
+            10% { opacity: 1; transform: translateY(0); } 
+            80% { opacity: 1; } 
+            100% { opacity: 0; transform: translateY(-10px); } 
+        }
     </style>
 </head>
 <body>
@@ -60,7 +77,7 @@
     <div id="room-screen" style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background-color: #36393f;">
         <div class="welcome-box">
             <h2>BuyOut Lounge 🧈</h2>
-            <p>Ilagay ang Secret Pass (`pogikokaasar`) at ang iyong sariling IGN para magkasama kayo sa voice chat.</p>
+            <p>Ilagay ang Secret Pass at ang iyong IGN para pumasok.</p>
             <input type="password" id="secret-pass-input" placeholder="Secret Pass">
             <input type="text" id="ign-input" placeholder="Ilagay ang iyong IGN dito..." style="margin-bottom: 20px;">
             <button class="connect-btn" onclick="verifyAndJoin()">Pumasok sa Voice Channel</button>
@@ -85,20 +102,32 @@
                     </div>
                 </div>
                 <div class="user-profile-bar">
-                    <div class="profile-info">
-                        <div class="user-avatar">🎮</div>
-                        <div>
-                            <div class="profile-name" id="my-display-ign">IGN</div>
-                            <div class="profile-status">Online</div>
+                    <div class="volume-settings">
+                        <div class="volume-slider-group">
+                            <span><i class="fa-solid fa-microphone"></i> Mic Vol:</span>
+                            <input type="range" id="mic-volume-slider" min="0" max="2" step="0.1" value="1" oninput="changeMicVolume(this.value)">
+                        </div>
+                        <div class="volume-slider-group">
+                            <span><i class="fa-solid fa-volume-high"></i> Sound Vol:</span>
+                            <input type="range" id="sound-volume-slider" min="0" max="2" step="0.1" value="1" oninput="changeSoundVolume(this.value)">
                         </div>
                     </div>
-                    <div class="profile-controls">
-                        <button class="control-btn" id="mute-btn" onclick="toggleMute()" title="Mute">
-                            <i class="fa-solid fa-microphone"></i>
-                        </button>
-                        <button class="control-btn" id="deafen-btn" onclick="toggleDeafen()" title="Deafen">
-                            <i class="fa-solid fa-headphones"></i>
-                        </button>
+                    <div class="profile-main-row">
+                        <div class="profile-info">
+                            <div class="user-avatar">🎮</div>
+                            <div>
+                                <div class="profile-name" id="my-display-ign">IGN</div>
+                                <div class="profile-status">Online</div>
+                            </div>
+                        </div>
+                        <div class="profile-controls">
+                            <button class="control-btn" id="mute-btn" onclick="toggleMute()" title="Mute">
+                                <i class="fa-solid fa-microphone"></i>
+                            </button>
+                            <button class="control-btn" id="deafen-btn" onclick="toggleDeafen()" title="Deafen">
+                                <i class="fa-solid fa-headphones"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -110,8 +139,8 @@
                 </div>
                 <div class="stage-content">
                     <div class="welcome-box" style="text-align: center;">
-                        <h2>Naka-connect ka na sa Room! 🎙️</h2>
-                        <p>Sabihin sa iyong tropa na pumasok gamit ang parehong Secret Pass at kanilang IGN.</p>
+                        <h2>Naka-connect ka na! 🎙️</h2>
+                        <p>Kontrolin ang volume ng mic o sound sa ibaba, at tingnan kung sino ang naka-mute sa sidebar.</p>
                     </div>
                 </div>
             </div>
@@ -119,16 +148,20 @@
     </div>
 
     <div id="audio-container"></div>
+    <div id="toast-container"></div>
 
     <script>
         let localStream;
+        let audioContext;
+        let micGainNode;
         let peer;
         let myIGN = "";
         let isMuted = false;
         let isDeafened = false;
+        let currentSoundVolume = 1;
         const activeConnections = {};
+        const peerStates = {}; // Tracker ng mute/deafen status ng iba
 
-        // Nakapirming Master ID para sa room na ito
         const MASTER_ROOM_ID = "buyout_lounge_master_room_pogikokaasar_v1";
 
         async function verifyAndJoin() {
@@ -136,7 +169,7 @@
             myIGN = document.getElementById('ign-input').value.trim();
 
             if (passInput !== "pogikokaasar") {
-                alert("Mali ang Secret Pass! Subukang ulitin.");
+                alert("Mali ang Secret Pass!");
                 return;
             }
 
@@ -146,9 +179,20 @@
             }
 
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                const rawStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                
+                // Web Audio API para sa mic gain/volume control
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(rawStream);
+                micGainNode = audioContext.createGain();
+                micGainNode.gain.value = 1.0;
+                
+                const destination = audioContext.createMediaStreamDestination();
+                source.connect(micGainNode);
+                micGainNode.connect(destination);
+                localStream = destination.stream;
             } catch (err) {
-                alert("Kailangan mong payagan ang mikropono (microphone permission) para magamit ito!");
+                alert("Kailangan ang mikropono para sa voice chat!");
                 return;
             }
 
@@ -156,19 +200,15 @@
             document.getElementById('chat-screen').style.display = 'block';
             document.getElementById('my-display-ign').innerText = myIGN;
 
-            // Gamitin ang sariling IGN bilang bahagi ng Peer ID para makilala kaagad
             const myUniqueId = "user_" + myIGN.replace(/[^a-zA-Z0-9]/g, '_') + "_" + Math.floor(Math.random() * 10000);
             peer = new Peer(myUniqueId);
 
             peer.on('open', (id) => {
-                console.log('My Peer ID:', id);
-                addUserToList(myIGN + " (Ikaw)", id);
-
-                // Subukang kumonekta sa Master Room Coordinator para malaman kung sino pa ang online
+                peerStates[id] = { ign: myIGN, muted: false, deafened: false };
+                updateUserListUI();
                 connectToMasterRoom(id);
             });
 
-            // Kapag may tumawag na audio stream mula sa iba
             peer.on('call', (call) => {
                 call.answer(localStream);
                 call.on('stream', (remoteStream) => {
@@ -176,33 +216,30 @@
                 });
             });
 
-            // Kapag may pumasok na data connection mula sa iba
             peer.on('connection', (conn) => {
                 setupDataConnection(conn);
             });
         }
 
         function connectToMasterRoom(myId) {
-            // Kung ikaw ang unang pumasok, subukan nating i-register ang sarili bilang host kung bakante, 
-            // o kaya ay mag-connect sa master coordinator ID para mag-sync ng mga user.
             const masterConn = peer.connect(MASTER_ROOM_ID);
             
             masterConn.on('open', () => {
-                masterConn.send({ type: 'JOIN', ign: myIGN, peerId: myId });
+                masterConn.send({ type: 'JOIN', ign: myIGN, peerId: myId, muted: isMuted, deafened: isDeafened });
             });
 
             masterConn.on('data', (data) => {
                 if (data.type === 'PEER_LIST') {
-                    // Tawagan ang lahat ng nakitang active peers sa room
                     data.peers.forEach(p => {
                         if (p.peerId !== peer.id) {
+                            peerStates[p.peerId] = { ign: p.ign, muted: p.muted, deafened: p.deafened };
                             callPeer(p.peerId, p.ign);
                         }
                     });
+                    updateUserListUI();
                 }
             });
 
-            // Kung hindi pa nag-e-exist ang master room, ikaw ang mag-host nito sa parehong browser instance!
             setTimeout(() => {
                 if (!masterConn.open) {
                     createMasterRoomHost(myId);
@@ -213,23 +250,28 @@
         function createMasterRoomHost(myId) {
             try {
                 const hostPeer = new Peer(MASTER_ROOM_ID);
-                let roomPeers = [{ peerId: myId, ign: myIGN }];
+                let roomPeers = [{ peerId: myId, ign: myIGN, muted: isMuted, deafened: isDeafened }];
 
                 hostPeer.on('connection', (conn) => {
                     conn.on('data', (data) => {
                         if (data.type === 'JOIN') {
-                            roomPeers.push({ peerId: data.peerId, ign: data.ign });
-                            // I-broadcast ang updated list sa lahat
+                            roomPeers.push({ peerId: data.peerId, ign: data.ign, muted: data.muted, deafened: data.deafened });
+                            peerStates[data.peerId] = { ign: data.ign, muted: data.muted, deafened: data.deafened };
+
                             roomPeers.forEach(p => {
                                 if (p.peerId !== peer.id && p.peerId !== data.peerId) {
-                                    // Notify other peers
                                     let c = peer.connect(p.peerId);
-                                    c.on('open', () => c.send({ type: 'NEW_PEER', peerId: data.peerId, ign: data.ign }));
+                                    c.on('open', () => c.send({ type: 'NEW_PEER', peerId: data.peerId, ign: data.ign, muted: data.muted, deafened: data.deafened }));
                                 }
                             });
-                            // Ibalik ang kasalukuyang listahan sa bagong salta
                             conn.send({ type: 'PEER_LIST', peers: roomPeers });
-                            addUserToList(data.ign, data.peerId);
+                            updateUserListUI();
+                        } else if (data.type === 'STATUS_UPDATE') {
+                            if (peerStates[data.peerId]) {
+                                peerStates[data.peerId].muted = data.muted;
+                                peerStates[data.peerId].deafened = data.deafened;
+                                updateAllPeersStatus(data.peerId, data.muted, data.deafened);
+                            }
                         }
                     });
                 });
@@ -240,9 +282,7 @@
                         playAudioStream(call.peer, remoteStream);
                     });
                 });
-            } catch(e) {
-                console.log("Master host already active or handled.");
-            }
+            } catch(e) {}
         }
 
         function callPeer(peerId, ign) {
@@ -256,25 +296,63 @@
                 });
             }
 
-            // Magbukas din ng data connection para sa pagkilala ng pangalan
             const conn = peer.connect(peerId);
             conn.on('open', () => {
-                conn.send({ type: 'HELLO', ign: myIGN });
+                conn.send({ type: 'HELLO', ign: myIGN, muted: isMuted, deafened: isDeafened });
             });
             conn.on('data', (data) => {
-                if (data.type === 'HELLO') {
-                    addUserToList(data.ign, peerId);
-                }
+                handleDataMessage(data, peerId);
             });
         }
 
         function setupDataConnection(conn) {
             conn.on('data', (data) => {
-                if (data.type === 'HELLO') {
-                    addUserToList(data.ign, conn.peer);
-                } else if (data.type === 'NEW_PEER') {
+                handleDataMessage(data, conn.peer);
+            });
+        }
+
+        function handleDataMessage(data, peerId) {
+            if (data.type === 'HELLO' || data.type === 'NEW_PEER') {
+                peerStates[peerId] = { ign: data.ign, muted: data.muted, deafened: data.deafened };
+                if (data.type === 'NEW_PEER') {
                     callPeer(data.peerId, data.ign);
                 }
+                updateUserListUI();
+            } else if (data.type === 'STATUS_UPDATE') {
+                if (peerStates[peerId]) {
+                    const oldMuted = peerStates[peerId].muted;
+                    const oldDeafened = peerStates[peerId].deafened;
+                    peerStates[peerId].muted = data.muted;
+                    peerStates[peerId].deafened = data.deafened;
+
+                    if (oldMuted !== data.muted) {
+                        showToast(`${peerStates[peerId].ign} ay ${data.muted ? 'naka-Mute 🔇' : 'nag-Unmute 🎙️'}`);
+                    }
+                    if (oldDeafened !== data.deafened) {
+                        showToast(`${peerStates[peerId].ign} ay ${data.deafened ? 'naka-Deafen 🎧❌' : 'nag-Undeafen 🎧'}`);
+                    }
+                }
+                updateUserListUI();
+            }
+        }
+
+        function updateAllPeersStatus(peerId, muted, deafened) {
+            // Broadcast status sa iba kung sakaling host
+            Object.keys(activeConnections).forEach(id => {
+                let c = peer.connect(id);
+                c.on('open', () => c.send({ type: 'STATUS_UPDATE', peerId, muted, deafened }));
+            });
+        }
+
+        function broadcastMyStatus() {
+            const masterConn = peer.connect(MASTER_ROOM_ID);
+            masterConn.on('open', () => {
+                masterConn.send({ type: 'STATUS_UPDATE', peerId: peer.id, muted: isMuted, deafened: isDeafened });
+            });
+
+            Object.keys(activeConnections).forEach(id => {
+                let c = peer.connect(id);
+                c.on('open', () => c.send({ type: 'STATUS_UPDATE', peerId: peer.id, muted: isMuted, deafened: isDeafened }));
             });
         }
 
@@ -284,6 +362,7 @@
             audio.id = 'audio_' + peerId;
             audio.srcObject = stream;
             audio.autoplay = true;
+            audio.volume = currentSoundVolume;
             if (isDeafened) audio.muted = true;
             document.getElementById('audio-container').appendChild(audio);
 
@@ -292,13 +371,33 @@
                 let parts = peerId.split('_');
                 displayName = parts.length > 1 ? parts[1] : "Tropa";
             }
-            addUserToList(displayName, peerId);
+            if (!peerStates[peerId]) {
+                peerStates[peerId] = { ign: displayName, muted: false, deafened: false };
+            }
+            updateUserListUI();
+        }
+
+        function changeMicVolume(val) {
+            if (micGainNode) {
+                micGainNode.gain.value = parseFloat(val);
+            }
+        }
+
+        function changeSoundVolume(val) {
+            currentSoundVolume = parseFloat(val);
+            const audioElements = document.querySelectorAll('#audio-container audio');
+            audioElements.forEach(audio => {
+                audio.volume = currentSoundVolume;
+            });
         }
 
         function toggleMute() {
             if (!localStream) return;
             isMuted = !isMuted;
-            localStream.getAudioTracks()[0].enabled = !isMuted;
+            if (micGainNode) {
+                micGainNode.gain.value = isMuted ? 0 : parseFloat(document.getElementById('mic-volume-slider').value);
+            }
+            
             const btn = document.getElementById('mute-btn');
             if (isMuted) {
                 btn.classList.add('active');
@@ -306,6 +405,12 @@
             } else {
                 btn.classList.remove('active');
                 btn.innerHTML = '<i class="fa-solid fa-microphone"></i>';
+            }
+
+            if (peer && peer.id) {
+                peerStates[peer.id].muted = isMuted;
+                updateUserListUI();
+                broadcastMyStatus();
             }
         }
 
@@ -326,6 +431,12 @@
                 deafenBtn.classList.remove('active');
                 deafenBtn.innerHTML = '<i class="fa-solid fa-headphones"></i>';
             }
+
+            if (peer && peer.id) {
+                peerStates[peer.id].deafened = isDeafened;
+                updateUserListUI();
+                broadcastMyStatus();
+            }
         }
 
         function leaveCall() {
@@ -338,17 +449,43 @@
             window.location.reload();
         }
 
-        function addUserToList(name, id) {
+        function updateUserListUI() {
             const list = document.getElementById('active-users-list');
-            if (document.getElementById('user_ui_' + id)) return;
-            const userDiv = document.createElement('div');
-            userDiv.className = 'voice-user';
-            userDiv.id = 'user_ui_' + id;
-            userDiv.innerHTML = `
-                <div class="user-avatar">🎮</div>
-                <span>${name}</span>
-            `;
-            list.appendChild(userDiv);
+            list.innerHTML = '';
+
+            for (const [id, data] of Object.entries(peerStates)) {
+                const userDiv = document.createElement('div');
+                userDiv.className = 'voice-user';
+                
+                let iconsHTML = '';
+                if (data.muted) iconsHTML += '<i class="fa-solid fa-microphone-slash" title="Muted"></i>';
+                if (data.deafened) iconsHTML += '<i class="fa-solid fa-volume-xmark" title="Deafened"></i>';
+
+                let displayName = data.ign;
+                if (id === (peer ? peer.id : '')) {
+                    displayName += " (Ikaw)";
+                }
+
+                userDiv.innerHTML = `
+                    <div class="user-left">
+                        <div class="user-avatar">🎮</div>
+                        <span>${displayName}</span>
+                    </div>
+                    <div class="user-icons">${iconsHTML}</div>
+                `;
+                list.appendChild(userDiv);
+            }
+        }
+
+        function showToast(message) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.remove();
+            }, 3000);
         }
     </script>
 </body>
